@@ -1,11 +1,4 @@
-template-package
-================
+colcon-ros-domain-id-coordinator
+================================
 
-An extension for `colcon-core <https://github.com/colcon/colcon-core>`_ to act as a template for new extensions.
-
-When using this template, be sure to replace all instances of the word "template" in the repository::
-
-   $ find * -type f | xargs sed -i 's/template-package/colcon-package-name/g'
-   $ find * -type f | xargs sed -i 's/template_package/colcon_package_name/g'
-   $ mv template_package colcon_package_name
-   $ grep -iR template *
+An extension for `colcon-core <https://github.com/colcon/colcon-core>`_ to coordinate different DDS `domain IDs <https://docs.ros.org/en/rolling/Concepts/Intermediate/About-Domain-ID.html>`_ for concurrently running tasks.
