@@ -1,8 +1,15 @@
 apache
+asyncio
 colcon
+cottsay
+darwin
 iterdir
+noqa
 pathlib
+plugin
+prepend
 pytest
 scspell
 setuptools
 thomas
+todo
