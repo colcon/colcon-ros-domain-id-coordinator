@@ -55,17 +55,17 @@ class ROSDomainIDShell(ShellExtensionPoint):
     def create_hook_set_value(  # noqa: D102
         self, env_hook_name, prefix_path, pkg_name, name, value,
     ):
-        return Path('ros_domain_id')
+        return Path('ros_domain_id.txt')
 
     def create_hook_append_value(  # noqa: D102
         self, env_hook_name, prefix_path, pkg_name, name, subdirectory,
     ):
-        return Path('ros_domain_id')
+        return Path('ros_domain_id.txt')
 
     def create_hook_prepend_value(  # noqa: D102
         self, env_hook_name, prefix_path, pkg_name, name, subdirectory,
     ):
-        return Path('ros_domain_id')
+        return Path('ros_domain_id.txt')
 
     async def generate_command_environment(  # noqa: D102
         self, task_name, build_base, dependencies,
