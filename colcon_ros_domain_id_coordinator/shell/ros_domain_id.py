@@ -8,22 +8,30 @@ from pathlib import Path
 import platform
 from random import shuffle
 
+from colcon_core.event.job import JobEnded
+from colcon_core.event.job import JobSkipped
+from colcon_core.event_handler import EventHandlerExtensionPoint
+from colcon_core.logging import colcon_logger
 from colcon_core.plugin_system import satisfies_version
 from colcon_core.plugin_system import SkipExtensionException
-from colcon_core.shell import logger
 from colcon_core.shell import ShellExtensionPoint
 
+logger = colcon_logger.getChild(__name__)
 
-class ROSDomainIDShell(ShellExtensionPoint):
+
+class ROSDomainIDShell(EventHandlerExtensionPoint, ShellExtensionPoint):
     """Set a different ROS_DOMAIN_ID environment variable for each task."""
 
-    # The priority should be higher than any usable shells
+    # The (shell) priority should be higher than any usable shells
     PRIORITY = 900
 
     def __init__(self):  # noqa: D107
         super().__init__()
+        satisfies_version(
+            EventHandlerExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
         satisfies_version(ShellExtensionPoint.EXTENSION_POINT_VERSION, '^2.2')
 
+        self.allocated_ids = {}
         self.free_ids = Queue()
 
         all_ids = []
@@ -40,6 +48,8 @@ class ROSDomainIDShell(ShellExtensionPoint):
         shuffle(all_ids)
         for i in all_ids:
             self.free_ids.put_nowait(str(i))
+
+        logger.debug(f'Have {self.free_ids.qsize()} domain IDs for assignment')
 
     def get_file_extensions(self):  # noqa: D102
         return ()
@@ -70,19 +80,44 @@ class ROSDomainIDShell(ShellExtensionPoint):
     async def generate_command_environment(  # noqa: D102
         self, task_name, build_base, dependencies,
     ):
-        try:
-            domain_id = self.free_ids.get_nowait()
-        except QueueEmpty:
-            logger.warn(f"No free ROS_DOMAIN_ID to assign for '{task_name}'")
+        # Allocate unique IDs based on the build_base
+        build_base = str(build_base)
+
+        if build_base in self.allocated_ids:
+            domain_id = self.allocated_ids[build_base]
+        else:
+            try:
+                domain_id = self.free_ids.get_nowait()
+            except QueueEmpty:
+                domain_id = None
+
+        if domain_id is None:
+            logger.warn(f"No free ROS_DOMAIN_ID to assign for '{build_base}'")
             os.environ.pop('ROS_DOMAIN_ID', None)
-            domain_id = None
         else:
             os.environ['ROS_DOMAIN_ID'] = domain_id
             logger.debug(
-                f"Allocated ROS_DOMAIN_ID={domain_id} for '{task_name}'")
+                f"Allocated ROS_DOMAIN_ID={domain_id} for '{build_base}'")
 
-            # Place the ID at the end of the FIFO to be reused if needed
-            self.free_ids.put_nowait(domain_id)
+        self.allocated_ids[build_base] = domain_id
 
         # This extension can't actually perform command environment generation
         raise SkipExtensionException()
+
+    def __call__(self, event):  # noqa: D102
+        data = event[0]
+
+        if isinstance(data, (JobEnded, JobSkipped)):
+            job = event[1]
+
+            build_base = getattr(job.task_context.args, 'build_base', None)
+            if build_base is None:
+                return
+
+            domain_id = self.allocated_ids.pop(build_base, None)
+            if domain_id is None:
+                return
+
+            self.free_ids.put_nowait(domain_id)
+            logger.debug(
+                f"Released ROS_DOMAIN_ID={domain_id} for '{build_base}'")
