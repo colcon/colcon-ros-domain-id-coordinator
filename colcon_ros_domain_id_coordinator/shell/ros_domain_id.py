@@ -31,6 +31,8 @@ class ROSDomainIDShell(EventHandlerExtensionPoint, ShellExtensionPoint):
             EventHandlerExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
         satisfies_version(ShellExtensionPoint.EXTENSION_POINT_VERSION, '^2.2')
 
+        self._default_id = os.environ.get('ROS_DOMAIN_ID', None)
+
         self.allocated_ids = {}
         self.free_ids = Queue()
 
@@ -40,14 +42,18 @@ class ROSDomainIDShell(EventHandlerExtensionPoint, ShellExtensionPoint):
         # TODO(cottsay): Determine usable IDs based on the system's
         #                network configuration
         if system in ('Darwin', 'Windows'):
-            all_ids.extend(range(1, 167))
+            all_ids.extend(range(0, 167))
         else:
-            all_ids.extend(range(1, 102))
+            all_ids.extend(range(0, 102))
             all_ids.extend(range(215, 233))
 
         shuffle(all_ids)
         for i in all_ids:
-            self.free_ids.put_nowait(str(i))
+            i_str = str(i)
+
+            # If the user has a specific ID set already, avoid using that
+            if i_str != (self._default_id or '0'):
+                self.free_ids.put_nowait(i_str)
 
         logger.debug(f'Have {self.free_ids.qsize()} domain IDs for assignment')
 
@@ -81,7 +87,8 @@ class ROSDomainIDShell(EventHandlerExtensionPoint, ShellExtensionPoint):
         self, task_name, build_base, dependencies,
     ):
         # Allocate unique IDs based on the build_base
-        build_base = str(build_base)
+        build_base = os.path.abspath(os.path.join(
+            os.getcwd(), str(build_base)))
 
         if build_base in self.allocated_ids:
             domain_id = self.allocated_ids[build_base]
@@ -93,12 +100,18 @@ class ROSDomainIDShell(EventHandlerExtensionPoint, ShellExtensionPoint):
 
         if domain_id is None:
             logger.warn(f"No free ROS_DOMAIN_ID to assign for '{build_base}'")
-            os.environ.pop('ROS_DOMAIN_ID', None)
+            if self._default_id is None:
+                os.environ.pop('ROS_DOMAIN_ID', None)
+            else:
+                os.environ['ROS_DOMAIN_ID'] = self._default_id
         else:
             os.environ['ROS_DOMAIN_ID'] = domain_id
             logger.debug(
                 f"Allocated ROS_DOMAIN_ID={domain_id} for '{build_base}'")
 
+        # If we failed to allocate an ID for this build_base, specifically
+        # store 'None' so that future allocation attempts for this build_base
+        # are consistent and don't assign an ID that has since been unassigned.
         self.allocated_ids[build_base] = domain_id
 
         # This extension can't actually perform command environment generation
@@ -113,6 +126,9 @@ class ROSDomainIDShell(EventHandlerExtensionPoint, ShellExtensionPoint):
             build_base = getattr(job.task_context.args, 'build_base', None)
             if build_base is None:
                 return
+
+            build_base = os.path.abspath(os.path.join(
+                os.getcwd(), build_base))
 
             domain_id = self.allocated_ids.pop(build_base, None)
             if domain_id is None:
