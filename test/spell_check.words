@@ -4,10 +4,12 @@ colcon
 cottsay
 darwin
 iterdir
+linter
 noqa
 pathlib
 plugin
 prepend
+pydocstyle
 pytest
 qsize
 scspell
