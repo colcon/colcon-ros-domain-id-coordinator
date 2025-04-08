@@ -105,6 +105,9 @@ class ROSDomainIDShell(EventHandlerExtensionPoint, ShellExtensionPoint):
             else:
                 os.environ['ROS_DOMAIN_ID'] = self._default_id
         else:
+            os.environ['DISABLE_ROS_ISOLATION'] = '1'
+            os.environ['RMW_TEST_FIXTURE_DISABLE_ISOLATION'] = '1'
+            os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
             os.environ['ROS_DOMAIN_ID'] = domain_id
             logger.debug(
                 f"Allocated ROS_DOMAIN_ID={domain_id} for '{build_base}'")

@@ -5,6 +5,7 @@ cottsay
 darwin
 iterdir
 linter
+localhost
 noqa
 pathlib
 plugin
