@@ -105,6 +105,12 @@ class ROSDomainIDShell(EventHandlerExtensionPoint, ShellExtensionPoint):
             else:
                 os.environ['ROS_DOMAIN_ID'] = self._default_id
         else:
+            # Used for the domain_coordinator by ament_cmake_ros
+            os.environ['DISABLE_ROS_ISOLATION'] = '1'
+            # Used by rmw_test_fixture_implementation
+            os.environ['RMW_TEST_FIXTURE_DISABLE_ISOLATION'] = '1'
+            # Attempt to keep tests off the host's network
+            os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
             os.environ['ROS_DOMAIN_ID'] = domain_id
             logger.debug(
                 f"Allocated ROS_DOMAIN_ID={domain_id} for '{build_base}'")
