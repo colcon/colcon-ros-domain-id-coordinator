@@ -1,13 +1,11 @@
-ament
 apache
 asyncio
-cmake
 colcon
 cottsay
 darwin
+inet
 iterdir
 linter
-localhost
 noqa
 pathlib
 plugin
