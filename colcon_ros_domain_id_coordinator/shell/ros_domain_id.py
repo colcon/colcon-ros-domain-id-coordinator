@@ -131,6 +131,7 @@ class ROSDomainIDShell(EventHandlerExtensionPoint, ShellExtensionPoint):
             else:
                 os.environ['ROS_DOMAIN_ID'] = self._default_id
         else:
+            os.environ['ROS_DOMAIN_ID'] = domain_id
             logger.debug(
                 f"Allocated ROS_DOMAIN_ID={domain_id} for '{build_base}'")
 
