@@ -46,7 +46,8 @@ class ROSDomainIDShell(EventHandlerExtensionPoint, ShellExtensionPoint):
             all_ids.extend(range(0, 167))
         else:
             all_ids.extend(range(0, 102))
-            all_ids.extend(range(215, 233))
+            # Cyclone DDS security rejects domain IDs above 230
+            all_ids.extend(range(215, 231))
 
         shuffle(all_ids)
         for i in all_ids:
